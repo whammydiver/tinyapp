@@ -6,7 +6,7 @@ const PORT = 8080;
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: true}));
 
-const urlDatabase = {
+let urlDatabase = {
   'b2xVn2': 'http://www.lighthouselabs.ca',
   '9sm5xK': 'http://www.google.com'
 };
@@ -52,5 +52,8 @@ app.get('/urls/:shortURL', (req, res) => {
 
 app.post('/urls', (req, res) => {
   console.log(req.body);
-  res.send('ok');
+  const randString = generateRandomString();
+  urlDatabase[randString] = req.body.longURL;
+  const templateVars = { shortURL: randString, longURL: req.body.longURL };
+  res.render('urls_show', templateVars);
 });

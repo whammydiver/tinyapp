@@ -69,10 +69,6 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 app.post('/urls', (req, res) => {
   const randString = generateRandomString();
   urlDatabase[randString] = "https://" + req.body.longURL;
-  const templateVars = { 
-    userName: req.cookies[userName],
-    shortURL: randString, longURL: "https://" + req.body.longURL 
-  };
   res.redirect(`/urls/${randString}`);
 });
 
@@ -87,8 +83,13 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  console.log(req.body);
   const userName = req.body.username;
   res.cookie('username', userName);
   res.redirect('/urls');
 })
+
+app.post('/logout', (req, res) => {
+  const userName = req.body.userName;
+  res.clearCookie('username');
+  res.redirect('/urls');
+});

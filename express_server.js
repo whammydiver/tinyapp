@@ -59,8 +59,8 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 
 app.post('/urls', (req, res) => {
   const randString = generateRandomString();
-  urlDatabase[randString] = req.body.longURL;
-  const templateVars = { shortURL: randString, longURL: req.body.longURL };
+  urlDatabase[randString] = "https://" + req.body.longURL;
+  const templateVars = { shortURL: randString, longURL: "https://" + req.body.longURL };
   res.redirect(`/urls/${randString}`);
 });
 

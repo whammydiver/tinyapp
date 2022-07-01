@@ -79,7 +79,11 @@ app.get('/urls', (req, res) => {
 
 app.get('/urls/new', (req, res) => {
   const userID = req.cookies.userID;
-  res.render('urls_new', {userID});
+  if (!userID) {
+    res.render('urls_login', {userID});
+  } else {
+    res.render('urls_new', {userID});
+  }
 });
 
 app.get('/urls/:shortURL', (req, res) => {
@@ -170,7 +174,6 @@ app.post('/register', (req, res) => {
     res.send('400 - email aleady exists. Please login')
   } else {
     users[id] = { id, userID, password };
-    console.log(users);
     res.cookie('userID', users[id]);
     res.redirect('/urls');
   }

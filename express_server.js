@@ -93,9 +93,9 @@ app.get('/urls/new', (req, res) => {
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const userID = req.cookies.userID
-  const shortURL = req.params.shortURL
-  const longURL = urlDatabase[req.params.shortURL] 
+  const userID = req.cookies.userID;
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[req.params.shortURL].longURL; 
 
   const templateVars = { userID, shortURL, longURL };
   res.render('urls_show', templateVars);
@@ -112,26 +112,32 @@ app.get('/register', (req, res) => {
 })
 
 app.get('/u/:shortURL', (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
+  if (!urlDatabase[req.params.shortURL]) {
+    res.send('404 - tinyURL does not exist');
+  } else {
+    const longURL = urlDatabase[req.params.shortURL].longURL;
+    res.redirect(longURL);
+  }
 });
 
 // accepts a new url, creates a new key:value pair in the master URL object using the 
 // random string generator
 app.post('/urls', (req, res) => {
+  const userID = req.cookies.userID.id;
   const randString = generateRandomString();
-  urlDatabase[randString] = "https://" + req.body.longURL;
+  urlDatabase[randString] = { longURL: "https://" + req.body.longURL, userID }
+  console.log(urlDatabase);
   res.redirect(`/urls/${randString}`);
 });
 
 // overwrites (updates) an existing URL in the main key:value URL object
 app.post('/urls/:shortURL/edit', (req, res) => {
-  urlDatabase[req.params.shortURL] = req.body.longURL;
   const userID = req.cookies.userID;
+  urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
   const templateVars = { 
     userID,
     shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL] 
+    longURL: urlDatabase[req.params.shortURL].longURL 
   };  
   res.render('urls_show', templateVars);
 });  

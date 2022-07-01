@@ -54,6 +54,17 @@ function checkEmail(email) {
   return false;
 }
 
+// function that loops through the full urlDatabase and returns only those urls created by the currently logged in user.
+function urlsForUser(id) {
+  let userURLs = {};
+  for (let url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      userURLs[url] = urlDatabase[url];
+    }
+  }
+  return userURLs;
+}
+
 // function creates a random 6 character string
 function generateRandomString() {
   let randString = '';
@@ -70,7 +81,7 @@ app.listen(PORT, () => {
 
 // redirects / to homepage
 app.get('/', (req, res) => {
-  res.redirect('/urls');
+  res.redirect('/register');
 });
 
 app.get('/urls.json', (req, res) => {
@@ -78,11 +89,19 @@ app.get('/urls.json', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  const userID = req.cookies.userID;
-  const templateVars = { urls: urlDatabase, userID };
-  res.render('urls_index', templateVars);
+  if (!req.cookies.userID) {
+    res.render('urls_index', {});
+  } else {
+    const userID = req.cookies.userID;
+    console.log(userID);
+    const userURLs = urlsForUser(userID.id);
+    console.log('userURLs = ', userURLs);
+    const templateVars = { urls: userURLs, userID };
+    res.render('urls_index', templateVars);
+  }
 });
 
+// create new requires user to be logged in. new urls records include the userID of the creator.
 app.get('/urls/new', (req, res) => {
   const userID = req.cookies.userID;
   if (!userID) {
@@ -168,7 +187,7 @@ app.post('/login', (req, res) => {
 app.post('/logout', (req, res) => {
   const userID = req.body.userID;
   res.clearCookie('userID');
-  res.redirect('/urls');
+  res.redirect('/login');
 });
 
 // accepts a new userID (email) and password, generates a random id and

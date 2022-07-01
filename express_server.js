@@ -28,7 +28,8 @@ const users = {
     password: "dishwasher-funk"
   }
 };
-
+// function takes in email and password and returns existing user details from {users} object if present, 
+// returns "user not found if not"
 function getUser(email, password) {
   for (let user in users) {
     console.log(users[user].userID, users[user].password)
@@ -36,11 +37,10 @@ function getUser(email, password) {
       return users[user];
     }
   }
-  //const usersList = Object.entries(users);
-  //const user = usersList.find(([key, user]) => user.email === email && user.password === password);
   return 'user not found';
 }
 
+// function creates a random 6 character string
 function generateRandomString() {
   let randString = '';
   const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%&*';
@@ -92,12 +92,15 @@ app.get('/u/:shortURL', (req, res) => {
   res.redirect(longURL);
 });
 
+// accepts a new url, creates a new key:value pair in the master URL object using the 
+// random string generator
 app.post('/urls', (req, res) => {
   const randString = generateRandomString();
   urlDatabase[randString] = "https://" + req.body.longURL;
   res.redirect(`/urls/${randString}`);
 });
 
+// overwrites (updates) an existing URL in the main key:value URL object
 app.post('/urls/:shortURL/edit', (req, res) => {
   urlDatabase[req.params.shortURL] = req.body.longURL;
   const userID = req.cookies.userID;
@@ -109,11 +112,13 @@ app.post('/urls/:shortURL/edit', (req, res) => {
   res.render('urls_show', templateVars);
 });  
 
+// Deletes a selected key:value {miniLink:fullURL} from the main database 
 app.post('/urls/:shortURL/delete', (req, res) => {
   delete urlDatabase[req.params.shortURL];
   res.redirect('/urls');
 });
 
+// verifies if user exists, logs in establishes a user cookie.
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -123,18 +128,26 @@ app.post('/login', (req, res) => {
   res.redirect('/urls');
 })
 
+// logs user out and removes user cookie.
 app.post('/logout', (req, res) => {
   const userID = req.body.userID;
   res.clearCookie('userID');
   res.redirect('/urls');
 });
 
+// accepts a new userID (email) and password, generates a random id and
+// adds the new user details to the main user object 'database'. Ensures 
+// no duplicate records are created for users with teh same email address,
+// does not allow for empty fields during registration process.
 app.post('/register', (req, res) => {
   const id = generateRandomString();
   const userID = req.body.email;
   const password = req.body.password;
   users[userID] = { id, userID, password };
-  // console.log(users);
+  if (userID === '' || password === '') {
+    res.
+  }
+
   res.cookie('userID', users[userID]);
   res.redirect('/urls');
 });

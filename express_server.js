@@ -28,16 +28,26 @@ const users = {
     password: "dishwasher-funk"
   }
 };
-// function takes in email and password and returns existing user details from {users} object if present, 
+// function takes in email and password and returns all existing user details from {users} object if present, 
 // returns "user not found if not"
 function getUser(email, password) {
   for (let user in users) {
-    console.log(users[user].userID, users[user].password)
+    // console.log(users[user].userID, users[user].password)
     if (users[user].userID === email && users[user].password === password) {
       return users[user];
     }
   }
-  return 'user not found';
+  return null;
+}
+
+function checkEmail(email) {
+  for(let user in users) {
+    console.log(users[user].userID, email)
+    if (users[user].userID === email) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // function creates a random 6 character string
@@ -82,6 +92,11 @@ app.get('/urls/:shortURL', (req, res) => {
   res.render('urls_show', templateVars);
 });
 
+app.get('/login', (req, res) => {  
+  const userID = req.cookies.userID;
+  res.render('urls_login', {userID})
+})
+
 app.get('/register', (req, res) => {  
   const userID = req.cookies.userID;
   res.render('user_reg', {userID})
@@ -123,9 +138,15 @@ app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUser(email, password);
-  console.log(user, "found user");
-  res.cookie('userID', user);
-  res.redirect('/urls');
+  console.log("user - ", user);
+  if (user === null && checkEmail(email) === false) {
+    res.send('403 - user not found');
+  } else if (user === null && checkEmail(email) === true) {
+    res.send('403 - password does not match. Try again.')
+  } else {
+    res.cookie('userID', user);
+    res.redirect('/urls');
+  }
 })
 
 // logs user out and removes user cookie.
@@ -143,11 +164,15 @@ app.post('/register', (req, res) => {
   const id = generateRandomString();
   const userID = req.body.email;
   const password = req.body.password;
-  users[userID] = { id, userID, password };
   if (userID === '' || password === '') {
-    res.
+    res.send("Error 400: username and password must contain values");
   }
-
-  res.cookie('userID', users[userID]);
-  res.redirect('/urls');
+  if (checkEmail(userID) === true) {
+    res.send('400 - email aleady exists. Please login')
+  } else {
+    users[id] = { id, userID, password };
+    console.log(users);
+    res.cookie('userID', users[id]);
+    res.redirect('/urls');
+  }
 });

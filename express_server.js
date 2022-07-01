@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const res = require('express/lib/response');
 const { redirect } = require('express/lib/response');
 const req = require('express/lib/request');
+const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080;
 
@@ -34,18 +35,19 @@ const users = {
   'Gc4QXM' : {
     id: 'Gc4QXM', 
     userID: 'taylorpaulian@gmail.com', 
-    password: 'scouse'
+    hashedPassword: '$2a$10$YW.b74sUBVk6lguRVQzbhuz6g./CddSbM8MGEJbddf6gcKENa9Lgy'
   },
   'eS*EY2': { 
     id: 'eS*EY2', 
     userID: 'paul@whammydiver.ca', 
-    password: 'scouse' }
+    hashedPassword: '$2a$10$O8FvsEyHQI3MqqbvHw1oy.BWbKG9iFI5m1qD1rxDZvOsuis3qQnmy' 
+  }
 };
 // function takes in email and password and returns all existing user details from {users} object if present, 
 // returns "user not found if not"
-function getUser(email, password) {
+function getUser(email) {
   for (let user in users) {
-    if (users[user].userID === email && users[user].password === password) {
+    if (users[user].userID === email) {
       return users[user];
     }
   }
@@ -85,7 +87,7 @@ function urlsForUser(id) {
 // function creates a random 6 character string
 function generateRandomString() {
   let randString = '';
-  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#*';
+  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@*';
   for (let i = 0; i < 6; i++) {
     randString += char[Math.floor(Math.random() * char.length)];    
   }
@@ -170,7 +172,7 @@ app.post('/urls', (req, res) => {
     const userID = req.cookies.userID;
     const shortURL = existingURL;
     const longURL = urlDatabase[existingURL].longURL; 
-  
+    console.log(urlDatabase);
     const templateVars = { userID, shortURL, longURL }
     res.render('urls_show', templateVars);
   }
@@ -210,14 +212,15 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUser(email, password);
-  if (user === null && checkEmail(email) === false) {
+  const user = getUser(email);
+  console.log(user);
+  if (!user) {
     res.send('403 - user not found');
-  } else if (user === null && checkEmail(email) === true) {
-    res.send('403 - password does not match. Try again.')
+  } else if (bcrypt.compareSync(password, user.hashedPassword)) {
+      res.cookie('userID', user);
+      res.redirect('/urls');
   } else {
-    res.cookie('userID', user);
-    res.redirect('/urls');
+      res.send('403 - password does not match. Try again.')
   }
 })
 
@@ -236,13 +239,14 @@ app.post('/register', (req, res) => {
   const id = generateRandomString();
   const userID = req.body.email;
   const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
   if (userID === '' || password === '') {
     res.send("Error 400: username and password must contain values");
   }
-  if (checkEmail(userID) === true) {
+  if (getUser(userID)) {
     res.send('400 - email aleady exists. Please login')
   } else {
-    users[id] = { id, userID, password };
+    users[id] = { id, userID, hashedPassword };
     res.cookie('userID', users[id]);
     res.redirect('/urls');
   }

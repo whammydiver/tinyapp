@@ -29,9 +29,21 @@ const users = {
   }
 };
 
+function getUser(email, password) {
+  for (let user in users) {
+    console.log(users[user].userID, users[user].password)
+    if (users[user].userID === email && users[user].password === password) {
+      return users[user];
+    }
+  }
+  //const usersList = Object.entries(users);
+  //const user = usersList.find(([key, user]) => user.email === email && user.password === password);
+  return 'user not found';
+}
+
 function generateRandomString() {
   let randString = '';
-  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%^&*()[]{}';
+  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%&*';
   for (let i = 0; i < 6; i++) {
     randString += char[Math.floor(Math.random() * char.length)];    
   }
@@ -105,15 +117,9 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  for (let id in ids) {
-    if (users[id].email === email && users[id].password === password) {
-      const userID = obj;
-    }
-  }
-  if (userID = null) {
-    //
-  }
-  res.cookie('userID', userID);
+  const user = getUser(email, password);
+  console.log(user, "found user");
+  res.cookie('userID', user);
   res.redirect('/urls');
 })
 
@@ -124,10 +130,11 @@ app.post('/logout', (req, res) => {
 });
 
 app.post('/register', (req, res) => {
-  const userID = generateRandomString();
-  const email = req.body.email;
+  const id = generateRandomString();
+  const userID = req.body.email;
   const password = req.body.password;
-  users[userID] = { userID, email, password }
-  res.cookie('userID', userID);
+  users[userID] = { id, userID, password };
+  // console.log(users);
+  res.cookie('userID', users[userID]);
   res.redirect('/urls');
 });

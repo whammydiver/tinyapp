@@ -12,14 +12,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 
 let urlDatabase = {
-  'b2xVn2': {
-    longURL: 'http://www.lighthouselabs.ca',
-    userID: "aJ48lW"
-  },
-  '9sm5xK': {
-    longURL: 'http://www.google.com',
-    userID: "aJ48lW"
-  }
+  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: "aJ48lW" },
+  '9sm5xK': { longURL: 'http://www.google.com', userID: "aJ48lW" },
+  '7!hZd$': { longURL: 'https://www.unisonsoftware.ca', userID: 'eS*EY2' },
+  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', userID: 'eS*EY2' },
+  'CkQQoe': { longURL: 'https://www.hello.com', userID: 'Gc4QXM' },
+  'IaYdqJ': { longURL: 'https://www.goodbye.com', userID: 'Gc4QXM' }
 };
 
 const users = { 
@@ -32,7 +30,16 @@ const users = {
     id: "user2RandomID", 
     userID: "user2@example.com", 
     password: "dishwasher-funk"
-  }
+  },
+  'Gc4QXM' : {
+    id: 'Gc4QXM', 
+    userID: 'taylorpaulian@gmail.com', 
+    password: 'scouse'
+  },
+  'eS*EY2': { 
+    id: 'eS*EY2', 
+    userID: 'paul@whammydiver.ca', 
+    password: 'scouse' }
 };
 // function takes in email and password and returns all existing user details from {users} object if present, 
 // returns "user not found if not"
@@ -54,6 +61,16 @@ function checkEmail(email) {
   return false;
 }
 
+function checkURL(longURL) {
+  for (let url in urlDatabase) {
+    if (urlDatabase[url].longURL === longURL) {
+      return url;
+    }
+  }
+  return false;
+}
+
+
 // function that loops through the full urlDatabase and returns only those urls created by the currently logged in user.
 function urlsForUser(id) {
   let userURLs = {};
@@ -68,7 +85,7 @@ function urlsForUser(id) {
 // function creates a random 6 character string
 function generateRandomString() {
   let randString = '';
-  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#$%&*';
+  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@#*';
   for (let i = 0; i < 6; i++) {
     randString += char[Math.floor(Math.random() * char.length)];    
   }
@@ -81,7 +98,7 @@ app.listen(PORT, () => {
 
 // redirects / to homepage
 app.get('/', (req, res) => {
-  res.redirect('/register');
+  res.redirect('/login');
 });
 
 app.get('/urls.json', (req, res) => {
@@ -90,7 +107,7 @@ app.get('/urls.json', (req, res) => {
 
 app.get('/urls', (req, res) => {
   if (!req.cookies.userID) {
-    res.render('urls_index', {});
+    res.redirect('/login');
   } else {
     const userID = req.cookies.userID;
     console.log(userID);
@@ -143,28 +160,49 @@ app.get('/u/:shortURL', (req, res) => {
 // random string generator
 app.post('/urls', (req, res) => {
   const userID = req.cookies.userID.id;
-  const randString = generateRandomString();
-  urlDatabase[randString] = { longURL: "https://" + req.body.longURL, userID }
-  console.log(urlDatabase);
-  res.redirect(`/urls/${randString}`);
+  existingURL = checkURL("https://" + req.body.longURL);
+  if (existingURL === false) {
+    const randString = generateRandomString();
+    urlDatabase[randString] = { longURL: "https://" + req.body.longURL, userID }
+    console.log(urlDatabase);
+    res.redirect(`/urls/${randString}`);
+  } else {
+    const userID = req.cookies.userID;
+    const shortURL = existingURL;
+    const longURL = urlDatabase[existingURL].longURL; 
+  
+    const templateVars = { userID, shortURL, longURL }
+    res.render('urls_show', templateVars);
+  }
 });
 
 // overwrites (updates) an existing URL in the main key:value URL object
 app.post('/urls/:shortURL/edit', (req, res) => {
   const userID = req.cookies.userID;
-  urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
-  const templateVars = { 
-    userID,
-    shortURL: req.params.shortURL, 
-    longURL: urlDatabase[req.params.shortURL].longURL 
-  };  
-  res.render('urls_show', templateVars);
+  if (urlDatabase[req.params.shortURL].userID === req.cookies.userID.id) {
+    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
+    const templateVars = { 
+      userID,
+      shortURL: req.params.shortURL, 
+      longURL: urlDatabase[req.params.shortURL].longURL 
+    }
+    res.render('urls_show', templateVars);
+    } else {
+      res.send('Error - user not authorised');
+    }
 });  
 
-// Deletes a selected key:value {miniLink:fullURL} from the main database 
+// Deletes a selected key:value {miniLink:fullURL} from the main database
 app.post('/urls/:shortURL/delete', (req, res) => {
-  delete urlDatabase[req.params.shortURL];
-  res.redirect('/urls');
+  const userID = req.cookies.userID;
+  if (!userID) {
+    res.send('Error - user not authorised');
+  } else if (urlDatabase[req.params.shortURL].userID === req.cookies.userID.id) {
+    delete urlDatabase[req.params.shortURL];
+    res.redirect('/urls');
+  } else {
+    res.send('Error - user not authorised');
+  }
 });
 
 // verifies if user exists, checks email and password  match. If so, 

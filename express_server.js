@@ -32,7 +32,6 @@ const users = {
 // returns "user not found if not"
 function getUser(email, password) {
   for (let user in users) {
-    // console.log(users[user].userID, users[user].password)
     if (users[user].userID === email && users[user].password === password) {
       return users[user];
     }
@@ -42,7 +41,6 @@ function getUser(email, password) {
 
 function checkEmail(email) {
   for(let user in users) {
-    console.log(users[user].userID, email)
     if (users[user].userID === email) {
       return true;
     }
@@ -64,6 +62,7 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+// redirects / to homepage
 app.get('/', (req, res) => {
   res.redirect('/urls');
 });
@@ -133,12 +132,12 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   res.redirect('/urls');
 });
 
-// verifies if user exists, logs in establishes a user cookie.
+// verifies if user exists, checks email and password  match. If so, 
+// logs user in and establishes a user cookie.
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUser(email, password);
-  console.log("user - ", user);
   if (user === null && checkEmail(email) === false) {
     res.send('403 - user not found');
   } else if (user === null && checkEmail(email) === true) {
@@ -158,7 +157,7 @@ app.post('/logout', (req, res) => {
 
 // accepts a new userID (email) and password, generates a random id and
 // adds the new user details to the main user object 'database'. Ensures 
-// no duplicate records are created for users with teh same email address,
+// no duplicate records are created for users with the same email address,
 // does not allow for empty fields during registration process.
 app.post('/register', (req, res) => {
   const id = generateRandomString();

@@ -19,12 +19,12 @@ let urlDatabase = {
 const users = { 
   "userRandomID": {
     id: "userRandomID", 
-    email: "user@example.com", 
+    userID: "user@example.com", 
     password: "purple-monkey-dinosaur"
   },
  "user2RandomID": {
     id: "user2RandomID", 
-    email: "user2@example.com", 
+    userID: "user2@example.com", 
     password: "dishwasher-funk"
   }
 };
@@ -51,28 +51,28 @@ app.get('/urls.json', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  const email = req.cookies.email;
-  const templateVars = { urls: urlDatabase, email };
+  const userID = req.cookies.userID;
+  const templateVars = { urls: urlDatabase, userID };
   res.render('urls_index', templateVars);
 });
 
 app.get('/urls/new', (req, res) => {
-  const email = req.cookies.email;
-  res.render('urls_new', {email});
+  const userID = req.cookies.userID;
+  res.render('urls_new', {userID});
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const email = req.cookies.email
+  const userID = req.cookies.userID
   const shortURL = req.params.shortURL
   const longURL = urlDatabase[req.params.shortURL] 
 
-  const templateVars = { email, shortURL, longURL };
+  const templateVars = { userID, shortURL, longURL };
   res.render('urls_show', templateVars);
 });
 
 app.get('/register', (req, res) => {  
-  const email = req.cookies.email;
-  res.render('user_reg', {email})
+  const userID = req.cookies.userID;
+  res.render('user_reg', {userID})
 })
 
 app.get('/u/:shortURL', (req, res) => {
@@ -88,9 +88,9 @@ app.post('/urls', (req, res) => {
 
 app.post('/urls/:shortURL/edit', (req, res) => {
   urlDatabase[req.params.shortURL] = req.body.longURL;
-  const email = req.cookies.email;
+  const userID = req.cookies.userID;
   const templateVars = { 
-    email,
+    userID,
     shortURL: req.params.shortURL, 
     longURL: urlDatabase[req.params.shortURL] 
   };  
@@ -118,16 +118,16 @@ app.post('/login', (req, res) => {
 })
 
 app.post('/logout', (req, res) => {
-  const email = req.body.email;
-  res.clearCookie('email');
+  const userID = req.body.userID;
+  res.clearCookie('userID');
   res.redirect('/urls');
 });
 
 app.post('/register', (req, res) => {
-  const randomID = generateRandomString();
+  const userID = generateRandomString();
   const email = req.body.email;
   const password = req.body.password;
-  users[randomID] = { randomID, email, password }
-  res.cookie('email', email);
+  users[userID] = { userID, email, password }
+  res.cookie('userID', userID);
   res.redirect('/urls');
 });

@@ -3,10 +3,11 @@ const methodOverride = require('method-override');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const res = require('express/lib/response');
-const { getUserByEmail, checkURL, urlsForUser, generateRandomString } = require('./helperFunctions');
-const { redirect } = require('express/lib/response');
 const req = require('express/lib/request');
+const { redirect } = require('express/lib/response');
 const bcrypt = require('bcryptjs');
+const { getUserByEmail, checkURL, urlsForUser, generateRandomString } = require('./helperFunctions');
+
 const app = express();
 const PORT = 8080;
 
@@ -20,42 +21,31 @@ app.use(cookieSession({
 app.set('view engine', 'ejs');
 
 let urlDatabase = {
-  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: 'eS*EY2' },
-  '9sm5xK': { longURL: 'http://www.google.com', userID: 'Gc4QXM' },
-  '7!hZd$': { longURL: 'https://www.unisonsoftware.ca', userID: 'eS*EY2' },
-  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', userID: 'eS*EY2' },
-  'CkQQoe': { longURL: 'https://www.hello.com', userID: 'Gc4QXM' },
-  'IaYdqJ': { longURL: 'https://www.goodbye.com', userID: 'Gc4QXM' }
+  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: 'aJ48lW' },
+  '9sm5xK': { longURL: 'http://www.google.com', userID: 'aJ48lW' },
+  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', userID: 'aJ48lW' },
+  'CkQQoe': { longURL: 'https://www.hello.com', userID: 'aJ48lW' },
+  'IaYdqJ': { longURL: 'https://www.goodbye.com', userID: 'aJ48lW' }
 };
 
 const users = { 
   "aJ48lW": {
     id: "aJ48lW", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    hashedPassword: '$2a$10$Twxp7AW2eZ7osV8.nmqlFOK9ZsvMOgRmlc0SCaVm2oiOAlcgTpOu.'
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "dishwasher-funk"
+    hashedPassword: "dishwasher-funk"
   },
-  'Gc4QXM' : {
-    id: 'Gc4QXM', 
-    email: 'taylorpaulian@gmail.com', 
-    hashedPassword: '$2a$10$YW.b74sUBVk6lguRVQzbhuz6g./CddSbM8MGEJbddf6gcKENa9Lgy'
-  },
-  'eS*EY2': { 
-    id: 'eS*EY2', 
-    email: 'paul@whammydiver.ca', 
-    hashedPassword: '$2a$10$O8FvsEyHQI3MqqbvHw1oy.BWbKG9iFI5m1qD1rxDZvOsuis3qQnmy' 
-  }
 };
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
-// redirects / to homepage
+// redirects / to login
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
@@ -69,15 +59,13 @@ app.get('/urls', (req, res) => {
     res.redirect('/login');
   } else {
     const userID = req.session.userID;
-    console.log(userID);
     const userURLs = urlsForUser(userID.id, urlDatabase);
-    console.log('userURLs = ', userURLs);
     const templateVars = { urls: userURLs, userID };
     res.render('urls_index', templateVars);
   }
 });
 
-// create new requires user to be logged in. new urls records include the userID of the creator.
+// create new requires user to be logged in. new url records include the userID of the creator.
 app.get('/urls/new', (req, res) => {
   const userID = req.session.userID;
   if (!userID) {
@@ -115,8 +103,10 @@ app.get('/u/:shortURL', (req, res) => {
   }
 });
 
-// accepts a new url, creates a new key:value pair in the master URL object using the 
-// random string generator
+// accepts a new url, validates that it doesn't exist, and creates a new key:value pair in the 
+// master URL object using the random string generator. If url already exists in the database
+// for the logged in user, redirects to the edit page with existing record details displayed. 
+// (ensures no record duplication)
 app.post('/urls', (req, res) => {
   const userID = req.session.userID.id;
   existingURL = checkURL("https://" + req.body.longURL, urlDatabase);
@@ -162,7 +152,7 @@ app.delete('/urls/:shortURL/delete', (req, res) => {
   }
 });
 
-// verifies if user exists, checks email and password  match. If so, 
+// verifies if user exists, checks email and password match. If so, 
 // logs user in and establishes a user cookie.
 app.post('/login', (req, res) => {
   const email = req.body.email;
@@ -188,7 +178,7 @@ app.post('/logout', (req, res) => {
   res.redirect('/login');
 });
 
-// accepts a new userID (email) and password, generates a random id and
+// accepts a new email and password, generates a random id and
 // adds the new user details to the main user object 'database'. Ensures 
 // no duplicate records are created for users with the same email address,
 // does not allow for empty fields during registration process.
@@ -200,7 +190,7 @@ app.post('/register', (req, res) => {
   if (email === '' || password === '') {
     res.send("Error 400: username and password must contain values");
   }
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     res.send('400 - email aleady exists. Please login')
   } else {
     users[id] = { id, email, hashedPassword };

@@ -1,7 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session');
 const res = require('express/lib/response');
+const { getUserByEmail, checkURL, urlsForUser, generateRandomString } = require('./helperFunctions');
 const { redirect } = require('express/lib/response');
 const req = require('express/lib/request');
 const bcrypt = require('bcryptjs');
@@ -10,11 +11,14 @@ const PORT = 8080;
 
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ["strongestkeyever"]
+}));
 
 let urlDatabase = {
-  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: "aJ48lW" },
-  '9sm5xK': { longURL: 'http://www.google.com', userID: "aJ48lW" },
+  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: 'eS*EY2' },
+  '9sm5xK': { longURL: 'http://www.google.com', userID: 'Gc4QXM' },
   '7!hZd$': { longURL: 'https://www.unisonsoftware.ca', userID: 'eS*EY2' },
   '$mtDFB': { longURL: 'https://www.mortgagegroup.com', userID: 'eS*EY2' },
   'CkQQoe': { longURL: 'https://www.hello.com', userID: 'Gc4QXM' },
@@ -22,16 +26,6 @@ let urlDatabase = {
 };
 
 const users = { 
-  "aJ48lW": {
-    id: "aJ48lW", 
-    userID: "user@example.com", 
-    password: "purple-monkey-dinosaur"
-  },
- "user2RandomID": {
-    id: "user2RandomID", 
-    userID: "user2@example.com", 
-    password: "dishwasher-funk"
-  },
   'Gc4QXM' : {
     id: 'Gc4QXM', 
     userID: 'taylorpaulian@gmail.com', 
@@ -43,56 +37,6 @@ const users = {
     hashedPassword: '$2a$10$O8FvsEyHQI3MqqbvHw1oy.BWbKG9iFI5m1qD1rxDZvOsuis3qQnmy' 
   }
 };
-// function takes in email and password and returns all existing user details from {users} object if present, 
-// returns "user not found if not"
-function getUser(email) {
-  for (let user in users) {
-    if (users[user].userID === email) {
-      return users[user];
-    }
-  }
-  return null;
-}
-
-function checkEmail(email) {
-  for(let user in users) {
-    if (users[user].userID === email) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkURL(longURL) {
-  for (let url in urlDatabase) {
-    if (urlDatabase[url].longURL === longURL) {
-      return url;
-    }
-  }
-  return false;
-}
-
-
-// function that loops through the full urlDatabase and returns only those urls created by the currently logged in user.
-function urlsForUser(id) {
-  let userURLs = {};
-  for (let url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
-      userURLs[url] = urlDatabase[url];
-    }
-  }
-  return userURLs;
-}
-
-// function creates a random 6 character string
-function generateRandomString() {
-  let randString = '';
-  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@*';
-  for (let i = 0; i < 6; i++) {
-    randString += char[Math.floor(Math.random() * char.length)];    
-  }
-  return randString;
-}
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
@@ -108,12 +52,13 @@ app.get('/urls.json', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  if (!req.cookies.userID) {
+  console.log(req.session.id)
+  if (!req.session.userID) {
     res.redirect('/login');
   } else {
-    const userID = req.cookies.userID;
+    const userID = req.session.userID;
     console.log(userID);
-    const userURLs = urlsForUser(userID.id);
+    const userURLs = urlsForUser(userID.id, urlDatabase);
     console.log('userURLs = ', userURLs);
     const templateVars = { urls: userURLs, userID };
     res.render('urls_index', templateVars);
@@ -122,7 +67,7 @@ app.get('/urls', (req, res) => {
 
 // create new requires user to be logged in. new urls records include the userID of the creator.
 app.get('/urls/new', (req, res) => {
-  const userID = req.cookies.userID;
+  const userID = req.session.userID;
   if (!userID) {
     res.render('urls_login', {userID});
   } else {
@@ -131,7 +76,7 @@ app.get('/urls/new', (req, res) => {
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const userID = req.cookies.userID;
+  const userID = req.session.userID;
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[req.params.shortURL].longURL; 
 
@@ -140,12 +85,12 @@ app.get('/urls/:shortURL', (req, res) => {
 });
 
 app.get('/login', (req, res) => {  
-  const userID = req.cookies.userID;
+  const userID = req.session.userID;
   res.render('urls_login', {userID})
 })
 
 app.get('/register', (req, res) => {  
-  const userID = req.cookies.userID;
+  const userID = req.session.userID;
   res.render('user_reg', {userID})
 })
 
@@ -161,15 +106,15 @@ app.get('/u/:shortURL', (req, res) => {
 // accepts a new url, creates a new key:value pair in the master URL object using the 
 // random string generator
 app.post('/urls', (req, res) => {
-  const userID = req.cookies.userID.id;
-  existingURL = checkURL("https://" + req.body.longURL);
+  const userID = req.session.userID.id;
+  existingURL = checkURL("https://" + req.body.longURL, urlDatabase);
   if (existingURL === false) {
     const randString = generateRandomString();
-    urlDatabase[randString] = { longURL: "https://" + req.body.longURL, userID }
+    urlDatabase[randString] = { longURL: req.body.longURL, userID }
     console.log(urlDatabase);
     res.redirect(`/urls/${randString}`);
   } else {
-    const userID = req.cookies.userID;
+    const userID = req.session.userID;
     const shortURL = existingURL;
     const longURL = urlDatabase[existingURL].longURL; 
     console.log(urlDatabase);
@@ -180,8 +125,8 @@ app.post('/urls', (req, res) => {
 
 // overwrites (updates) an existing URL in the main key:value URL object
 app.post('/urls/:shortURL/edit', (req, res) => {
-  const userID = req.cookies.userID;
-  if (urlDatabase[req.params.shortURL].userID === req.cookies.userID.id) {
+  const userID = req.session.userID;
+  if (urlDatabase[req.params.shortURL].userID === req.session.userID.id) {
     urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
     const templateVars = { 
       userID,
@@ -196,10 +141,10 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 
 // Deletes a selected key:value {miniLink:fullURL} from the main database
 app.post('/urls/:shortURL/delete', (req, res) => {
-  const userID = req.cookies.userID;
+  const userID = req.session.userID;
   if (!userID) {
     res.send('Error - user not authorised');
-  } else if (urlDatabase[req.params.shortURL].userID === req.cookies.userID.id) {
+  } else if (urlDatabase[req.params.shortURL].userID === req.session.userID.id) {
     delete urlDatabase[req.params.shortURL];
     res.redirect('/urls');
   } else {
@@ -212,12 +157,14 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = getUser(email);
-  console.log(user);
+  const user = getUserByEmail(email, users);
+  if (email === '' || password === '') {
+    res.send("Error 400: username and password must contain values");
+  }
   if (!user) {
     res.send('403 - user not found');
   } else if (bcrypt.compareSync(password, user.hashedPassword)) {
-      res.cookie('userID', user);
+      req.session.userID = user;
       res.redirect('/urls');
   } else {
       res.send('403 - password does not match. Try again.')
@@ -227,7 +174,7 @@ app.post('/login', (req, res) => {
 // logs user out and removes user cookie.
 app.post('/logout', (req, res) => {
   const userID = req.body.userID;
-  res.clearCookie('userID');
+  req.session.userID = null;
   res.redirect('/login');
 });
 
@@ -243,11 +190,11 @@ app.post('/register', (req, res) => {
   if (userID === '' || password === '') {
     res.send("Error 400: username and password must contain values");
   }
-  if (getUser(userID)) {
+  if (getUserByEmail(userID)) {
     res.send('400 - email aleady exists. Please login')
   } else {
     users[id] = { id, userID, hashedPassword };
-    res.cookie('userID', users[id]);
+    req.session.userID = users[id];
     res.redirect('/urls');
   }
 });

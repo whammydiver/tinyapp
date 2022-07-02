@@ -1,4 +1,5 @@
 const express = require('express');
+const methodOverride = require('method-override');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const res = require('express/lib/response');
@@ -9,12 +10,14 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080;
 
-app.set('view engine', 'ejs');
+app.use(methodOverride('_method'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
   name: 'session',
   keys: ["strongestkeyever"]
 }));
+
+app.set('view engine', 'ejs');
 
 let urlDatabase = {
   'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: 'eS*EY2' },
@@ -131,7 +134,7 @@ app.post('/urls', (req, res) => {
 });
 
 // overwrites (updates) an existing URL in the main key:value URL object
-app.post('/urls/:shortURL/edit', (req, res) => {
+app.patch('/urls/:shortURL/edit', (req, res) => {
   const userID = req.session.userID;
   if (urlDatabase[req.params.shortURL].userID === req.session.userID.id) {
     urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
@@ -147,7 +150,7 @@ app.post('/urls/:shortURL/edit', (req, res) => {
 });  
 
 // Deletes a selected key:value {miniLink:fullURL} from the main database
-app.post('/urls/:shortURL/delete', (req, res) => {
+app.delete('/urls/:shortURL/delete', (req, res) => {
   const userID = req.session.userID;
   if (!userID) {
     res.send('Error - user not authorised');

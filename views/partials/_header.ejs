@@ -20,7 +20,7 @@
         </div>
         <%} else {%>
         <form action="/logout" method="POST">
-          <span>Logged in as: <%=userID.userID%></span>
+          <span>Logged in as: <%=userID.email%></span>
           <button type="logout" class="btn ml-2 btn-primary">Logout</button>
         </form>
       <%}%>

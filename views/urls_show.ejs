@@ -19,7 +19,7 @@
 
 
   <div class="card text-center">
-    <form class="form-inline justify-content-center" action="/urls/<%=shortURL%>/edit" method="POST">
+    <form class="form-inline justify-content-center" action="/urls/<%=shortURL%>/edit?_method=PATCH" method="POST">
       <div class="form-group mb-2">
         <label for="longURL">Edit URL:</label>
         <input class="form-control" type="text" name="longURL" placeholder="<%=longURL%>" style="width: 300px; margin: 1em">

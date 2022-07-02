@@ -26,6 +26,16 @@ let urlDatabase = {
 };
 
 const users = { 
+  "aJ48lW": {
+    id: "aJ48lW", 
+    userID: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+ "user2RandomID": {
+    id: "user2RandomID", 
+    userID: "user2@example.com", 
+    password: "dishwasher-funk"
+  },
   'Gc4QXM' : {
     id: 'Gc4QXM', 
     userID: 'taylorpaulian@gmail.com', 

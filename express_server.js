@@ -28,22 +28,22 @@ let urlDatabase = {
 const users = { 
   "aJ48lW": {
     id: "aJ48lW", 
-    userID: "user@example.com", 
+    email: "user@example.com", 
     password: "purple-monkey-dinosaur"
   },
  "user2RandomID": {
     id: "user2RandomID", 
-    userID: "user2@example.com", 
+    email: "user2@example.com", 
     password: "dishwasher-funk"
   },
   'Gc4QXM' : {
     id: 'Gc4QXM', 
-    userID: 'taylorpaulian@gmail.com', 
+    email: 'taylorpaulian@gmail.com', 
     hashedPassword: '$2a$10$YW.b74sUBVk6lguRVQzbhuz6g./CddSbM8MGEJbddf6gcKENa9Lgy'
   },
   'eS*EY2': { 
     id: 'eS*EY2', 
-    userID: 'paul@whammydiver.ca', 
+    email: 'paul@whammydiver.ca', 
     hashedPassword: '$2a$10$O8FvsEyHQI3MqqbvHw1oy.BWbKG9iFI5m1qD1rxDZvOsuis3qQnmy' 
   }
 };
@@ -62,7 +62,6 @@ app.get('/urls.json', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  console.log(req.session.id)
   if (!req.session.userID) {
     res.redirect('/login');
   } else {
@@ -121,13 +120,11 @@ app.post('/urls', (req, res) => {
   if (existingURL === false) {
     const randString = generateRandomString();
     urlDatabase[randString] = { longURL: req.body.longURL, userID }
-    console.log(urlDatabase);
     res.redirect(`/urls/${randString}`);
   } else {
     const userID = req.session.userID;
     const shortURL = existingURL;
     const longURL = urlDatabase[existingURL].longURL; 
-    console.log(urlDatabase);
     const templateVars = { userID, shortURL, longURL }
     res.render('urls_show', templateVars);
   }
@@ -194,16 +191,16 @@ app.post('/logout', (req, res) => {
 // does not allow for empty fields during registration process.
 app.post('/register', (req, res) => {
   const id = generateRandomString();
-  const userID = req.body.email;
+  const email = req.body.email;
   const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
-  if (userID === '' || password === '') {
+  if (email === '' || password === '') {
     res.send("Error 400: username and password must contain values");
   }
-  if (getUserByEmail(userID)) {
+  if (getUserByEmail(email)) {
     res.send('400 - email aleady exists. Please login')
   } else {
-    users[id] = { id, userID, hashedPassword };
+    users[id] = { id, email, hashedPassword };
     req.session.userID = users[id];
     res.redirect('/urls');
   }

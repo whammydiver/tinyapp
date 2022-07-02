@@ -2,7 +2,7 @@
 // returns "user not found if not"
 function getUserByEmail(email, database) {
   for (let user in database) {
-    if (database[user].userID === email) {
+    if (database[user].email === email) {
       return database[user];
     }
   }

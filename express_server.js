@@ -2,9 +2,6 @@ const express = require('express');
 const methodOverride = require('method-override');
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
-const res = require('express/lib/response');
-const req = require('express/lib/request');
-const { redirect } = require('express/lib/response');
 const bcrypt = require('bcryptjs');
 const { getUserByEmail, checkURL, urlsForUser, generateRandomString } = require('./helperFunctions');
 
@@ -28,42 +25,42 @@ let urlDatabase = {
   'IaYdqJ': { longURL: 'https://www.goodbye.com', id: 'aJ48lW' }
 };
 
-const users = { 
+const users = {
   "aJ48lW": {
-    id: "aJ48lW", 
-    email: "user@example.com", 
+    id: "aJ48lW",
+    email: "user@example.com",
     hashedPassword: '$2a$10$Twxp7AW2eZ7osV8.nmqlFOK9ZsvMOgRmlc0SCaVm2oiOAlcgTpOu.'
   },
- "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
     hashedPassword: "dishwasher-funk"
   },
 };
-
 
 // redirects / to login
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
+// returns a JSON display of the urlDatabase.
 app.get('/urls.json', (req, res) => {
   res.json(urlDatabase);
 });
 
+// Retrieves and displays the logged in user's created URLs.
 app.get('/urls', (req, res) => {
   if (!req.session.userCookie) {
     res.redirect('/login');
   } else {
     const userCookie = req.session.userCookie;
-    console.log(userCookie.id)
     const userURLs = urlsForUser(userCookie.id, urlDatabase);
     const templateVars = { urls: userURLs, userCookie };
     res.render('urls_index', templateVars);
   }
 });
 
-// create new requires user to be logged in. new url records include the userCookie of the creator.
+// Permits logged in users to create new url shor versions.
 app.get('/urls/new', (req, res) => {
   const userCookie = req.session.userCookie;
   if (!userCookie) {
@@ -73,93 +70,66 @@ app.get('/urls/new', (req, res) => {
   }
 });
 
+// Displays details of a single URL. The generated 'urls_show' page includes
+// the optional functionality to edit the long form URL.
 app.get('/urls/:shortURL', (req, res) => {
   const userCookie = req.session.userCookie;
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[req.params.shortURL].longURL; 
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   
   const templateVars = { userCookie, shortURL, longURL };
   res.render('urls_show', templateVars);
 });
 
-app.get('/login', (req, res) => {  
+// Renders the login page.
+app.get('/login', (req, res) => {
   const userCookie = req.session.userCookie;
-  res.render('urls_login', {userCookie})
-})
+  res.render('urls_login', {userCookie});
+});
 
-app.get('/register', (req, res) => {  
+// Renders the new user registration page.
+app.get('/register', (req, res) => {
   const userCookie = req.session.userCookie;
-  res.render('user_reg', {userCookie})
-})
+  res.render('user_reg', {userCookie});
+});
 
+// Permits creators of the short urls to use them with this abbreviated url format: (/u/:shortURL)
+// Attempts to visit these url shortforms by anyoe but their owner/creator will throw an error.
 app.get('/u/:shortURL', (req, res) => {
   const userCookie = req.session.userCookie;
-  console.log(req.session.userCookie.id);
-  console.log(urlDatabase[req.params.shortURL].id)
+  if (!urlDatabase[req.params.shortURL]) {
+    res.send('404 - tinyURL does not exist');
+  }
   if (userCookie.id === urlDatabase[req.params.shortURL].id) {
-    if (!urlDatabase[req.params.shortURL]) {
-      res.send('404 - tinyURL does not exist');
-    } else {
-      const longURL = urlDatabase[req.params.shortURL].longURL;
-      res.redirect(longURL);
-    }
+    const longURL = urlDatabase[req.params.shortURL].longURL;
+    res.redirect(longURL);
   } else {
     res.send('400 - user not authorized');
   }
 });
 
-// accepts a new url, validates that it doesn't exist, and creates a new key:value pair in the 
-// master URL object using the random string generator. If url already exists in the database
-// for the logged in user, redirects to the edit page with existing record details displayed. 
-// (ensures no record duplication)
-app.post('/urls', (req, res) => {
-  const userCookie = req.session.userCookie;
-  existingURL = checkURL(req.body.longURL, urlDatabase);
-  if (existingURL === false) {
-    const randString = generateRandomString();
-    urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id }
-    res.redirect(`/urls/${randString}`);
-  } else {
-    const userCookie = req.session.userCookie;
-    const shortURL = existingURL;
-    const longURL = urlDatabase[existingURL].longURL; 
-    const templateVars = { userCookie, shortURL, longURL }
-    res.render('urls_show', templateVars);
+// accepts a new email and password, generates a random id and
+// adds the new user details to the main user object 'database'. Ensures
+// no duplicate records are created for users with the same email address,
+// does not allow for empty fields during registration process.
+app.post('/register', (req, res) => {
+  const id = generateRandomString();
+  const email = req.body.email;
+  const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  if (email === '' || password === '') {
+    res.send("Error 400: username and password must contain values");
   }
-});
-
-// overwrites (updates) an existing URL in the main key:value URL object
-app.patch('/urls/:shortURL/edit', (req, res) => {
-  const userCookie = req.session.userCookie;
-  console.log(urlDatabase[req.params.shortURL][userCookie.id]);
-  console.log(eq.session.userCookie.id);
-  if (urlDatabase[req.params.shortURL][userCookie.id] === req.session.userCookie.id) {
-    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userCookie: userCookie.id }
-    const templateVars = { 
-      userCookie,
-      shortURL: req.params.shortURL, 
-      longURL: urlDatabase[req.params.shortURL].longURL 
-    }
-    res.render('urls_show', templateVars);
+  if (getUserByEmail(email, users)) {
+    res.send('400 - email aleady exists. Please login');
   } else {
-    res.send('Error - user not authorised');
-  }
-});  
-
-// Deletes a selected key:value {miniLink:fullURL} from the main database
-app.delete('/urls/:shortURL/delete', (req, res) => {
-  const userCookie = req.session.userCookie;
-  if (!userCookie) {
-    res.send('Error - user not authorised');
-  } else if (urlDatabase[req.params.shortURL].userCookie === req.session.userCookie.id) {
-    delete urlDatabase[req.params.shortURL];
+    users[id] = { id, email, hashedPassword };
+    req.session.userCookie = users[id];
     res.redirect('/urls');
-  } else {
-    res.send('Error - user not authorised');
   }
 });
 
-// verifies if user exists, checks email and password match. If so, 
+// verifies if user exists, checks email and password match. If so,
 // logs user in and establishes a user cookie.
 app.post('/login', (req, res) => {
   const email = req.body.email;
@@ -174,35 +144,64 @@ app.post('/login', (req, res) => {
     req.session.userCookie = user;
     res.redirect('/urls');
   } else {
-    res.send('403 - password does not match. Try again.')
+    res.send('403 - password does not match. Try again.');
   }
-})
+});
 
 // logs user out and removes user cookie.
 app.post('/logout', (req, res) => {
-  const userCookie = req.body.userCookie;
   req.session.userCookie = null;
   res.redirect('/login');
 });
 
-// accepts a new email and password, generates a random id and
-// adds the new user details to the main user object 'database'. Ensures 
-// no duplicate records are created for users with the same email address,
-// does not allow for empty fields during registration process.
-app.post('/register', (req, res) => {
-  const id = generateRandomString();
-  const email = req.body.email;
-  const password = req.body.password;
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  if (email === '' || password === '') {
-    res.send("Error 400: username and password must contain values");
-  }
-  if (getUserByEmail(email, users)) {
-    res.send('400 - email aleady exists. Please login')
+// accepts a new url, validates that it doesn't exist in this user's url records, and creates
+// a new key:value pair in the master URL object using the random string generator. If url
+// already exists in the database for the logged in user, redirects to the edit page with existing
+// record details displayed. (ensures no record duplication at the user level)
+app.post('/urls', (req, res) => {
+  const userCookie = req.session.userCookie;
+  let existingURL = checkURL(req.body.longURL, urlDatabase, userCookie.id);
+  if (existingURL === false) {
+    const randString = generateRandomString();
+    urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id };
+    console.log(urlDatabase);
+    res.redirect(`/urls/${randString}`);
   } else {
-    users[id] = { id, email, hashedPassword };
-    req.session.userCookie = users[id];
+    const userCookie = req.session.userCookie;
+    const shortURL = existingURL;
+    const longURL = urlDatabase[existingURL].longURL;
+    const templateVars = { userCookie, shortURL, longURL };
+    res.render('urls_show', templateVars);
+  }
+});
+
+// Overwrites (updates) an existing URL in the main key:value URL object
+// Only the creator of the shortURL can update.
+app.patch('/urls/:shortURL/edit', (req, res) => {
+  const userCookie = req.session.userCookie;
+  if (urlDatabase[req.params.shortURL].id === req.session.userCookie.id) {
+    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, id: userCookie.id };
+    const templateVars = {
+      userCookie,
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL
+    };
+    res.render('urls_show', templateVars);
+  } else {
+    res.send('Error - user not authorised');
+  }
+});
+
+// Allows the creator of a selected key:value {miniLink:fullURL} to delete the record from the main database.
+app.delete('/urls/:shortURL/delete', (req, res) => {
+  const userCookie = req.session.userCookie;
+  if (!userCookie) {
+    res.send('Error - user not authorised');
+  } else if (urlDatabase[req.params.shortURL].id === req.session.userCookie.id) {
+    delete urlDatabase[req.params.shortURL];
     res.redirect('/urls');
+  } else {
+    res.send('Error - user not authorised');
   }
 });
 

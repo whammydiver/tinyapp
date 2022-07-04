@@ -10,9 +10,9 @@ function getUserByEmail(email, database) {
 }
 
 // Checks if the user is creating a URL that already exists. 
-function checkURL(longURL, urlDatabase) {
+function checkURL(longURL, urlDatabase, userID) {
   for (let url in urlDatabase) {
-    if (urlDatabase[url].longURL === longURL) {
+    if (urlDatabase[url].longURL === longURL && urlDatabase[url].id === userID) {
       return url;
     }
   }

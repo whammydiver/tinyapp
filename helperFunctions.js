@@ -23,7 +23,7 @@ function checkURL(longURL, urlDatabase) {
 function urlsForUser(id, urlDatabase) {
   let userURLs = {};
   for (let url in urlDatabase) {
-    if (urlDatabase[url].userID === id) {
+    if (urlDatabase[url].id === id) {
       userURLs[url] = urlDatabase[url];
     }
   }

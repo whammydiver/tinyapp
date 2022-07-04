@@ -21,11 +21,11 @@ app.use(cookieSession({
 app.set('view engine', 'ejs');
 
 let urlDatabase = {
-  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', userID: 'aJ48lW' },
-  '9sm5xK': { longURL: 'http://www.google.com', userID: 'aJ48lW' },
-  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', userID: 'aJ48lW' },
-  'CkQQoe': { longURL: 'https://www.hello.com', userID: 'aJ48lW' },
-  'IaYdqJ': { longURL: 'https://www.goodbye.com', userID: 'aJ48lW' }
+  'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', id: 'aJ48lW' },
+  '9sm5xK': { longURL: 'http://www.google.com', id: 'aJ48lW' },
+  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', id: 'aJ48lW' },
+  'CkQQoe': { longURL: 'https://www.hello.com', id: 'aJ48lW' },
+  'IaYdqJ': { longURL: 'https://www.goodbye.com', id: 'aJ48lW' }
 };
 
 const users = { 
@@ -41,9 +41,6 @@ const users = {
   },
 };
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
 
 // redirects / to login
 app.get('/', (req, res) => {
@@ -55,51 +52,59 @@ app.get('/urls.json', (req, res) => {
 });
 
 app.get('/urls', (req, res) => {
-  if (!req.session.userID) {
+  if (!req.session.userCookie) {
     res.redirect('/login');
   } else {
-    const userID = req.session.userID;
-    const userURLs = urlsForUser(userID.id, urlDatabase);
-    const templateVars = { urls: userURLs, userID };
+    const userCookie = req.session.userCookie;
+    console.log(userCookie.id)
+    const userURLs = urlsForUser(userCookie.id, urlDatabase);
+    const templateVars = { urls: userURLs, userCookie };
     res.render('urls_index', templateVars);
   }
 });
 
-// create new requires user to be logged in. new url records include the userID of the creator.
+// create new requires user to be logged in. new url records include the userCookie of the creator.
 app.get('/urls/new', (req, res) => {
-  const userID = req.session.userID;
-  if (!userID) {
-    res.render('urls_login', {userID});
+  const userCookie = req.session.userCookie;
+  if (!userCookie) {
+    res.render('urls_login', {userCookie});
   } else {
-    res.render('urls_new', {userID});
+    res.render('urls_new', {userCookie});
   }
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const userID = req.session.userID;
+  const userCookie = req.session.userCookie;
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[req.params.shortURL].longURL; 
-
-  const templateVars = { userID, shortURL, longURL };
+  
+  const templateVars = { userCookie, shortURL, longURL };
   res.render('urls_show', templateVars);
 });
 
 app.get('/login', (req, res) => {  
-  const userID = req.session.userID;
-  res.render('urls_login', {userID})
+  const userCookie = req.session.userCookie;
+  res.render('urls_login', {userCookie})
 })
 
 app.get('/register', (req, res) => {  
-  const userID = req.session.userID;
-  res.render('user_reg', {userID})
+  const userCookie = req.session.userCookie;
+  res.render('user_reg', {userCookie})
 })
 
 app.get('/u/:shortURL', (req, res) => {
-  if (!urlDatabase[req.params.shortURL]) {
-    res.send('404 - tinyURL does not exist');
+  const userCookie = req.session.userCookie;
+  console.log(req.session.userCookie.id);
+  console.log(urlDatabase[req.params.shortURL].id)
+  if (userCookie.id === urlDatabase[req.params.shortURL].id) {
+    if (!urlDatabase[req.params.shortURL]) {
+      res.send('404 - tinyURL does not exist');
+    } else {
+      const longURL = urlDatabase[req.params.shortURL].longURL;
+      res.redirect(longURL);
+    }
   } else {
-    const longURL = urlDatabase[req.params.shortURL].longURL;
-    res.redirect(longURL);
+    res.send('400 - user not authorized');
   }
 });
 
@@ -108,43 +113,45 @@ app.get('/u/:shortURL', (req, res) => {
 // for the logged in user, redirects to the edit page with existing record details displayed. 
 // (ensures no record duplication)
 app.post('/urls', (req, res) => {
-  const userID = req.session.userID.id;
-  existingURL = checkURL("https://" + req.body.longURL, urlDatabase);
+  const userCookie = req.session.userCookie;
+  existingURL = checkURL(req.body.longURL, urlDatabase);
   if (existingURL === false) {
     const randString = generateRandomString();
-    urlDatabase[randString] = { longURL: req.body.longURL, userID }
+    urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id }
     res.redirect(`/urls/${randString}`);
   } else {
-    const userID = req.session.userID;
+    const userCookie = req.session.userCookie;
     const shortURL = existingURL;
     const longURL = urlDatabase[existingURL].longURL; 
-    const templateVars = { userID, shortURL, longURL }
+    const templateVars = { userCookie, shortURL, longURL }
     res.render('urls_show', templateVars);
   }
 });
 
 // overwrites (updates) an existing URL in the main key:value URL object
 app.patch('/urls/:shortURL/edit', (req, res) => {
-  const userID = req.session.userID;
-  if (urlDatabase[req.params.shortURL].userID === req.session.userID.id) {
-    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userID: userID.id }
+  const userCookie = req.session.userCookie;
+  console.log(urlDatabase[req.params.shortURL][userCookie.id]);
+  console.log(eq.session.userCookie.id);
+  if (urlDatabase[req.params.shortURL][userCookie.id] === req.session.userCookie.id) {
+    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, userCookie: userCookie.id }
     const templateVars = { 
-      userID,
+      userCookie,
       shortURL: req.params.shortURL, 
       longURL: urlDatabase[req.params.shortURL].longURL 
     }
     res.render('urls_show', templateVars);
-    } else {
-      res.send('Error - user not authorised');
-    }
+  } else {
+    res.send('Error - user not authorised');
+  }
 });  
 
 // Deletes a selected key:value {miniLink:fullURL} from the main database
 app.delete('/urls/:shortURL/delete', (req, res) => {
-  const userID = req.session.userID;
-  if (!userID) {
+  const userCookie = req.session.userCookie;
+  if (!userCookie) {
     res.send('Error - user not authorised');
-  } else if (urlDatabase[req.params.shortURL].userID === req.session.userID.id) {
+  } else if (urlDatabase[req.params.shortURL].userCookie === req.session.userCookie.id) {
     delete urlDatabase[req.params.shortURL];
     res.redirect('/urls');
   } else {
@@ -164,17 +171,17 @@ app.post('/login', (req, res) => {
   if (!user) {
     res.send('403 - user not found');
   } else if (bcrypt.compareSync(password, user.hashedPassword)) {
-      req.session.userID = user;
-      res.redirect('/urls');
+    req.session.userCookie = user;
+    res.redirect('/urls');
   } else {
-      res.send('403 - password does not match. Try again.')
+    res.send('403 - password does not match. Try again.')
   }
 })
 
 // logs user out and removes user cookie.
 app.post('/logout', (req, res) => {
-  const userID = req.body.userID;
-  req.session.userID = null;
+  const userCookie = req.body.userCookie;
+  req.session.userCookie = null;
   res.redirect('/login');
 });
 
@@ -194,7 +201,11 @@ app.post('/register', (req, res) => {
     res.send('400 - email aleady exists. Please login')
   } else {
     users[id] = { id, email, hashedPassword };
-    req.session.userID = users[id];
+    req.session.userCookie = users[id];
     res.redirect('/urls');
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
 });

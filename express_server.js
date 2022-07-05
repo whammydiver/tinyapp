@@ -12,7 +12,7 @@ app.use(methodOverride('_method'));
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
   name: 'session',
-  keys: ["strongestkeyever"]
+  keys: ['strongestkeyever']
 }));
 
 app.set('view engine', 'ejs');
@@ -20,21 +20,21 @@ app.set('view engine', 'ejs');
 let urlDatabase = {
   'b2xVn2': { longURL: 'http://www.lighthouselabs.ca', id: 'aJ48lW' },
   '9sm5xK': { longURL: 'http://www.google.com', id: 'aJ48lW' },
-  '$mtDFB': { longURL: 'https://www.mortgagegroup.com', id: 'aJ48lW' },
+  'omtDFB': { longURL: 'https://www.mortgagegroup.com', id: 'aJ48lW' },
   'CkQQoe': { longURL: 'https://www.hello.com', id: 'aJ48lW' },
   'IaYdqJ': { longURL: 'https://www.goodbye.com', id: 'aJ48lW' }
 };
 
 const users = {
-  "aJ48lW": {
-    id: "aJ48lW",
-    email: "user@example.com",
+  'aJ48lW': {
+    id: 'aJ48lW',
+    email: 'user@example.com',
     hashedPassword: '$2a$10$Twxp7AW2eZ7osV8.nmqlFOK9ZsvMOgRmlc0SCaVm2oiOAlcgTpOu.'
   },
-  "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    hashedPassword: "dishwasher-funk"
+  'user2RandomID': {
+    id: 'user2RandomID',
+    email: 'user2@example.com',
+    hashedPassword: 'dishwasher-funk'
   },
 };
 
@@ -56,15 +56,17 @@ app.get('/urls', (req, res) => {
     const userCookie = req.session.userCookie;
     const userURLs = urlsForUser(userCookie.id, urlDatabase);
     const templateVars = { urls: userURLs, userCookie };
+    console.log(urlDatabase);
+    console.log(users);
     res.render('urls_index', templateVars);
   }
 });
 
-// Permits logged in users to create new url shor versions.
+// Permits logged in users to create new url short versions.
 app.get('/urls/new', (req, res) => {
   const userCookie = req.session.userCookie;
   if (!userCookie) {
-    res.render('urls_login', {userCookie});
+    res.redirect('/login');
   } else {
     res.render('urls_new', {userCookie});
   }
@@ -84,27 +86,31 @@ app.get('/urls/:shortURL', (req, res) => {
 // Renders the login page.
 app.get('/login', (req, res) => {
   const userCookie = req.session.userCookie;
+  if (userCookie) {
+    res.redirect('/urls');
+  } else {
   res.render('urls_login', {userCookie});
+  }
 });
 
 // Renders the new user registration page.
 app.get('/register', (req, res) => {
   const userCookie = req.session.userCookie;
+  if (userCookie) {
+    res.redirect('/urls');
+  } else {
   res.render('user_reg', {userCookie});
+  };
 });
 
 // Permits creators of the short urls to use them with this abbreviated url format: (/u/:shortURL)
 // Attempts to visit these url shortforms by anyoe but their owner/creator will throw an error.
 app.get('/u/:shortURL', (req, res) => {
-  const userCookie = req.session.userCookie;
   if (!urlDatabase[req.params.shortURL]) {
     res.send('404 - tinyURL does not exist');
-  }
-  if (userCookie.id === urlDatabase[req.params.shortURL].id) {
+  } else {
     const longURL = urlDatabase[req.params.shortURL].longURL;
     res.redirect(longURL);
-  } else {
-    res.send('400 - user not authorized');
   }
 });
 
@@ -117,10 +123,9 @@ app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
-  if (email === '' || password === '') {
-    res.send("Error 400: username and password must contain values");
-  }
-  if (getUserByEmail(email, users)) {
+  if (!email || !password) {
+    res.send('Error 400: username and password must contain values');
+  } else if (getUserByEmail(email, users)) {
     res.send('400 - email aleady exists. Please login');
   } else {
     users[id] = { id, email, hashedPassword };
@@ -135,8 +140,8 @@ app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const user = getUserByEmail(email, users);
-  if (email === '' || password === '') {
-    res.send("Error 400: username and password must contain values");
+  if (!email || !password) {
+    res.send('Error 400: username and password must contain values');
   }
   if (!user) {
     res.send('403 - user not found');
@@ -150,7 +155,7 @@ app.post('/login', (req, res) => {
 
 // logs user out and removes user cookie.
 app.post('/logout', (req, res) => {
-  req.session.userCookie = null;
+  req.session = null;
   res.redirect('/login');
 });
 
@@ -164,14 +169,13 @@ app.post('/urls', (req, res) => {
   if (existingURL === false) {
     const randString = generateRandomString();
     urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id };
-    console.log(urlDatabase);
     res.redirect(`/urls/${randString}`);
   } else {
     const userCookie = req.session.userCookie;
     const shortURL = existingURL;
     const longURL = urlDatabase[existingURL].longURL;
     const templateVars = { userCookie, shortURL, longURL };
-    res.render('urls_show', templateVars);
+    res.redirect('urls_show', templateVars);
   }
 });
 

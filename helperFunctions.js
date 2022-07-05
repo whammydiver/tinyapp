@@ -33,7 +33,7 @@ function urlsForUser(id, urlDatabase) {
 // function creates a random 6 character string
 function generateRandomString() {
   let randString = '';
-  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890!@*';
+  const char = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890';
   for (let i = 0; i < 6; i++) {
     randString += char[Math.floor(Math.random() * char.length)];    
   }

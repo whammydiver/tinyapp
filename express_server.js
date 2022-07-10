@@ -165,35 +165,48 @@ app.post('/logout', (req, res) => {
 // record details displayed. (ensures no record duplication at the user level)
 app.post('/urls', (req, res) => {
   const userCookie = req.session.userCookie;
-  let existingURL = checkURL(req.body.longURL, urlDatabase, userCookie.id);
-  if (existingURL === false) {
-    const randString = generateRandomString();
-    urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id };
-    res.redirect(`/urls/${randString}`);
-  } else {
-    const userCookie = req.session.userCookie;
-    const shortURL = existingURL;
-    const longURL = urlDatabase[existingURL].longURL;
-    const templateVars = { userCookie, shortURL, longURL };
-    res.redirect('urls_show', templateVars);
+  if (!userCookie) {
+    res.redirect('/login');
   }
+  if (req.body.longURL === "") {
+    res.send('Error - URL cannot be empty');
+  } else {
+    let existingURL = checkURL(req.body.longURL, urlDatabase, userCookie.id);
+    if (existingURL === false) {
+      const randString = generateRandomString();
+      urlDatabase[randString] = { longURL: req.body.longURL, id: userCookie.id };
+      res.redirect(`/urls/${randString}`);
+    } else {
+      const userCookie = req.session.userCookie;
+      const shortURL = existingURL;
+      const longURL = urlDatabase[existingURL].longURL;
+      const templateVars = { userCookie, shortURL, longURL };
+      res.render('urls_show', templateVars);
+    }
+  }  
 });
 
 // Overwrites (updates) an existing URL in the main key:value URL object
 // Only the creator of the shortURL can update.
 app.patch('/urls/:shortURL/edit', (req, res) => {
   const userCookie = req.session.userCookie;
-  if (urlDatabase[req.params.shortURL].id === req.session.userCookie.id) {
-    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, id: userCookie.id };
-    const templateVars = {
-      userCookie,
-      shortURL: req.params.shortURL,
-      longURL: urlDatabase[req.params.shortURL].longURL
-    };
-    res.render('urls_show', templateVars);
-  } else {
-    res.send('Error - user not authorised');
+  if (!userCookie) {
+    res.redirect('/login');
   }
+  console.log(req.body.longURL)
+  if (req.body.longURL === "") {
+    res.send('Error - URL cannot be empty');
+  } else if (urlDatabase[req.params.shortURL].id === req.session.userCookie.id) {
+      urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, id: userCookie.id };
+      const templateVars = {
+        userCookie,
+        shortURL: req.params.shortURL,
+        longURL: urlDatabase[req.params.shortURL].longURL
+      };
+      res.render('urls_show', templateVars);
+    } else {
+      res.send('Error - user not authorised');
+  };
 });
 
 // Allows the creator of a selected key:value {miniLink:fullURL} to delete the record from the main database.

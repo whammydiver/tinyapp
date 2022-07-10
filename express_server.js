@@ -56,8 +56,6 @@ app.get('/urls', (req, res) => {
     const userCookie = req.session.userCookie;
     const userURLs = urlsForUser(userCookie.id, urlDatabase);
     const templateVars = { urls: userURLs, userCookie };
-    console.log(urlDatabase);
-    console.log(users);
     res.render('urls_index', templateVars);
   }
 });
@@ -89,7 +87,7 @@ app.get('/login', (req, res) => {
   if (userCookie) {
     res.redirect('/urls');
   } else {
-  res.render('urls_login', {userCookie});
+    res.render('urls_login', {userCookie});
   }
 });
 
@@ -99,8 +97,8 @@ app.get('/register', (req, res) => {
   if (userCookie) {
     res.redirect('/urls');
   } else {
-  res.render('user_reg', {userCookie});
-  };
+    res.render('user_reg', {userCookie});
+  }
 });
 
 // Permits creators of the short urls to use them with this abbreviated url format: (/u/:shortURL)
@@ -142,8 +140,7 @@ app.post('/login', (req, res) => {
   const user = getUserByEmail(email, users);
   if (!email || !password) {
     res.send('Error 400: username and password must contain values');
-  }
-  if (!user) {
+  } else if (!user) {
     res.send('403 - user not found');
   } else if (bcrypt.compareSync(password, user.hashedPassword)) {
     req.session.userCookie = user;
@@ -183,7 +180,7 @@ app.post('/urls', (req, res) => {
       const templateVars = { userCookie, shortURL, longURL };
       res.render('urls_show', templateVars);
     }
-  }  
+  }
 });
 
 // Overwrites (updates) an existing URL in the main key:value URL object
@@ -193,20 +190,19 @@ app.patch('/urls/:shortURL/edit', (req, res) => {
   if (!userCookie) {
     res.redirect('/login');
   }
-  console.log(req.body.longURL)
   if (req.body.longURL === "") {
     res.send('Error - URL cannot be empty');
   } else if (urlDatabase[req.params.shortURL].id === req.session.userCookie.id) {
-      urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, id: userCookie.id };
-      const templateVars = {
-        userCookie,
-        shortURL: req.params.shortURL,
-        longURL: urlDatabase[req.params.shortURL].longURL
-      };
-      res.render('urls_show', templateVars);
-    } else {
-      res.send('Error - user not authorised');
-  };
+    urlDatabase[req.params.shortURL] = { longURL: req.body.longURL, id: userCookie.id };
+    const templateVars = {
+      userCookie,
+      shortURL: req.params.shortURL,
+      longURL: urlDatabase[req.params.shortURL].longURL
+    };
+    res.render('urls_show', templateVars);
+  } else {
+    res.send('Error - user not authorised');
+  }
 });
 
 // Allows the creator of a selected key:value {miniLink:fullURL} to delete the record from the main database.
